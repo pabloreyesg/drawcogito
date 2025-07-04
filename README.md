@@ -1,48 +1,47 @@
-# Benson Figure Page Extractor (OCR)
+# 🧠 Benson Figure OCR & Cropping Tool
 
-**Author**: Pablo Reyes  
-**Description**: Automatically scans PDF files for a specific Spanish phrase using OCR and extracts the following page as an image.
+**Author:** Pablo Reyes  
+**License:** Free for academic and personal use.
 
 ---
 
-## What This Script Does
+## 📌 Description
 
-This Python script searches through all PDF files in a selected input folder, looking for the phrase:
+This Python application automates the process of detecting and extracting pages from PDF files that contain the phrase:
 
 > **"copia de la figura compleja de benson"**
 
-When the phrase is found in any page (except the last), it extracts the **next page** (i+1) and saves it as a PNG image. A detailed log file is also generated in the output folder.
+Once detected, the tool extracts the next page and allows the user to **manually review and crop** the image using an **intuitive graphical interface**.
 
 ---
 
-## Features
+## 🎯 Key Features
 
-- Batch processing of PDFs.
-- OCR-based phrase detection using Tesseract.
-- GUI prompts for selecting input and output folders.
-- Saves extracted pages as high-quality PNG files.
-- Creates a log file summarizing results for each PDF.
+- ✅ OCR detection of specific phrases inside PDFs (in Spanish)
+- 🖼️ Interactive image cropping with real-time preview
+- 🗂️ Flexible input/output folder selection
+- 🧩 Modular: run detection and cropping independently or sequentially
+- 💻 Easy-to-use GUI with styled menus
+- 🔁 Supports any PNG images for cropping (not just OCR output)
 
 ---
 
-## Requirements
+## 🛠️ Requirements
 
-- **Python 3.6 or higher**
-- **Tesseract OCR**  
-  Install from: [https://github.com/tesseract-ocr/tesseract](https://github.com/tesseract-ocr/tesseract)
+### System
 
-- **Python packages**:
-  ```bash
-  pip install pytesseract pdf2image pillow ```
+- Python 3.7 or higher
+- Tesseract OCR installed  
+  [Download Tesseract](https://github.com/tesseract-ocr/tesseract)
 
-Poppler (for pdf2image)
-Windows: Download from Poppler for Windows
-macOS: brew install poppler
-Linux: sudo apt install poppler-utils
+- Poppler installed (for `pdf2image` to work):
+  - **Windows**: [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/)
+  - **macOS**: `brew install poppler`
+  - **Linux**: `sudo apt install poppler-utils`
 
-If Tesseract is not in your system PATH, you must set its path manually in the script:
+### Python packages
 
-```python
+Install dependencies using pip:
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-```
+```bash
+pip install pytesseract pdf2image pillow
