@@ -33,13 +33,12 @@ When the phrase is found in any page (except the last), it extracts the **next p
 
 - **Python packages**:
   ```bash
-  pip install pytesseract pdf2image pillow 
-```
+  pip install pytesseract pdf2image pillow ```
 
 Poppler (for pdf2image)
 Windows: Download from Poppler for Windows
-macOS: ```brew install poppler```
-Linux: ```sudo apt install poppler-utils```
+macOS: brew install poppler
+Linux: sudo apt install poppler-utils
 
 If Tesseract is not in your system PATH, you must set its path manually in the script:
 
