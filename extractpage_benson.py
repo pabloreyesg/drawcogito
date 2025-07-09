@@ -1,8 +1,12 @@
+
 import os
 import pytesseract
 from pdf2image import convert_from_path
+from PyPDF2 import PdfReader
 from PIL import Image, ImageTk
 from tkinter import filedialog, Tk, Canvas, Button, Label, Toplevel, messagebox
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing
 
 # === CONFIG ===
 DPI = 150
@@ -33,27 +37,62 @@ def select_folders():
 
     return True
 
+# === OCR UTILITIES ===
+
+def convert_single_page(pdf_path, page_number):
+    images = convert_from_path(pdf_path, dpi=DPI, first_page=page_number, last_page=page_number)
+    return (page_number, images[0])
+
+def convert_all_pages_parallel(pdf_path, total_pages):
+    with ProcessPoolExecutor(max_workers=min(6, multiprocessing.cpu_count())) as executor:
+        futures = [executor.submit(convert_single_page, pdf_path, i + 1) for i in range(total_pages)]
+        results = [f.result() for f in futures]
+        results.sort(key=lambda x: x[0])  # ordenar por número de página
+        pages = [img for _, img in results]
+        return pages
+
+def ocr_page(index, image):
+    text = pytesseract.image_to_string(image, lang="spa", config="--psm 6").lower()
+    return (index, text)
+
+def guardar_resultado(file_name, index, page, output_dir):
+    output_filename = os.path.splitext(file_name)[0] + f"_benson_page_{index + 1}.png"
+    output_path = os.path.join(output_dir, output_filename)
+    page.save(output_path, "PNG")
+    return output_filename
+
 def run_ocr(log_to_console=True):
     log_path = os.path.join(output_dir, "results_log.txt")
     with open(log_path, "w", encoding="utf-8") as log_file:
         log_file.write("Log of Benson figure page extraction (via OCR)\n\n")
+
         for file in os.listdir(input_pdf_dir):
             if file.lower().endswith(".pdf"):
                 pdf_path = os.path.join(input_pdf_dir, file)
-                log_file.write(f"Processing file: {file}\n")
                 if log_to_console:
                     print(f"Processing: {file}")
-                pages = convert_from_path(pdf_path, dpi=DPI)
+                log_file.write(f"Processing file: {file}\n")
+
+                reader = PdfReader(pdf_path)
+                total_pages = len(reader.pages)
+                pages = convert_all_pages_parallel(pdf_path, total_pages)
+
+                with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+                    ocr_futures = [executor.submit(ocr_page, i, page) for i, page in enumerate(pages[:-1])]
+                    ocr_results = [f.result() for f in ocr_futures]
+
                 target_index = None
-                for i, page in enumerate(pages[:-1]):
-                    text = pytesseract.image_to_string(page, lang="spa").lower()
+                for i, text in ocr_results:
                     if KEY_PHRASE in text:
                         target_index = i + 1
                         break
+
                 if target_index is not None and target_index < len(pages):
-                    output_filename = os.path.splitext(file)[0] + "_benson_page_ocr.png"
-                    output_path = os.path.join(detected_pages_dir, output_filename)
-                    pages[target_index].save(output_path, "PNG")
+                    with ProcessPoolExecutor() as save_executor:
+                        save_future = save_executor.submit(
+                            guardar_resultado, file, target_index, pages[target_index], detected_pages_dir)
+                        output_filename = save_future.result()
+
                     log_file.write(f"✔ Page detected (page {target_index + 1}): {output_filename}\n\n")
                     if log_to_console:
                         print(f"✔ Page extracted: {output_filename}")
@@ -141,7 +180,6 @@ class RecorteInteractivoApp:
 def start_gui_crop():
     global confirmed_crops_dir
 
-    # Paso 1: seleccionar carpeta con imágenes si no hay OCR previos
     input_img_dir = detected_pages_dir
     if not os.path.exists(input_img_dir) or not os.listdir(input_img_dir):
         messagebox.showinfo("Select Folder", "No Benson pages detected. Please select a folder with PNG images.")
@@ -149,14 +187,12 @@ def start_gui_crop():
         if not input_img_dir:
             return
 
-    # Paso 2: carpeta de salida
     if not os.path.exists(confirmed_crops_dir) or not os.listdir(confirmed_crops_dir):
         confirmed_crops_dir = filedialog.askdirectory(title="Select Output Folder for Cropped Images")
         if not confirmed_crops_dir:
             return
         os.makedirs(confirmed_crops_dir, exist_ok=True)
 
-    # Lanzar GUI
     win = Toplevel()
     RecorteInteractivoApp(win, input_img_dir, confirmed_crops_dir)
 
